@@ -49,7 +49,7 @@ struct ErrorResponse {
 
 impl actix_web::ResponseError for AppError{
     fn error_response(&self) -> HttpResponse {
-        let err = format!("{}, self");
+        let err = format!("{}", self);
         let mut builder = match self {
             AppError::RecordAlreadyExists => HttpResponse::BadRequest(), 
             AppError::RecordNotFound => HttpResponse::NotFound(), _ => HttpResponse::InternalServerError(), 
