@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <script type="module">
-    async function init() {
-        const {instance} = await WebAssembly.instanciateStreaming(
-            fetch("./do_addition.wasm")
+    async function init() { // WASM code must be asyncronously loaded
+        const {instance} = await WebAssembly.instanciateStreaming( // lets us fetch WASM code that we can interact with it in JavaScript
+            fetch("./calcuations.wasm")
         );
 
-        const answer = instance.exports.add(1,2);
+        const answer = instance.exports.add(1, 2);
         console.log(answer);
     }
-    init(); // encapsulates what we ant to do in our script
+    init(); // Encapsulates what we want to do with the script
 </script>
