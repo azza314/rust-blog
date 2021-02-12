@@ -1,12 +1,46 @@
 <!DOCTYPE html>
 <script type="module">
-    async function init() { // WASM code must be asyncronously loaded
-        const {instance} = await WebAssembly.instanciateStreaming( // lets us fetch WASM code that we can interact with it in JavaScript
+    async function init() { // Wasm code must be asyncronously loaded
+        const {instance} = await WebAssembly.instanciateStreaming( // returns an object with an instance object that contains Wasm and a module object that share with other contexts like Web Workers.
             fetch("./calcuations.wasm")
         );
 
         const answer = instance.exports.add(1, 2);
-        console.log(answer);
+        
+        function greet(arg0){ 
+            const [ptr0, len0] = passStringToWasm(arg0); // call helper fn that takes input argument and turns it into the pointer & length we call Wasm function with
+            try{
+                const retptr =  wasm.greet(ptr0, len0); // make sure string was moved into Wasm memory and that it gets freed
+                const mem = new Uint32Array(wasm.memory.buffer); // get a handle on Wasm memory
+                const rustptr = mem[retptr / 4]; // offset from begining of memory region due to the return type and the fact that the array view over the meory buffer has type Uint32
+                const rustlen = mem[retptr / 4 + 1];
+                const realRet = getStringFromWasm(rustptr, rustlen).slice(); // make a copy in Js so we can safely tell Rust to free the memory
+                wasm.__boxed_str_free(retptr); // implement funtion in rust
+                return realRet; 
+            } finally {
+                wasm.__free(ptr0, len0); // if something goes wrong or not, we execute and free the memory usd in passStringToWasm()
+            }
+        }
+
+        function passStringToWasm(arg){
+            const buf = new TextEncoder('utf-').encode(arg); // JS API for turning a string into a memory buffer
+            const len = buf.length; 
+            const ptr = wasm.__malloc(len);
+            let array = new Uint8Array(wasm.memory.buffer);
+            array.set(buf, ptr);
+            return [ptr, len]
+        }
+
+        function getStringFromWasm(ptr, len){
+            const mem = new Uint8Array(wasm.memory.buffer);
+            const slice =  mem.slice(ptr, ptr + len);
+            const ret = new TextDecoder('utf-').decode(slice);
+            return ret; 
+        }
+        const result = greet("Rust");
+        console.log(result);
     }
     init(); // Encapsulates what we want to do with the script
 </script>
+
+
